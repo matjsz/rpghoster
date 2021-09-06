@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<title>RPGHoster | Rooms</title>
+
+		<script defer src="/__/firebase/9.0.1/firebase-app-compat.js"></script>
+		<script defer src="/__/firebase/9.0.1/firebase-auth-compat.js"></script>
+		<script defer src="/__/firebase/9.0.1/firebase-database-compat.js"></script>
+		<script defer src="/__/firebase/9.0.1/firebase-firestore-compat.js"></script>
+		<script defer src="/__/firebase/9.0.1/firebase-functions-compat.js"></script>
+		<script defer src="/__/firebase/9.0.1/firebase-messaging-compat.js"></script>
+		<script defer src="/__/firebase/9.0.1/firebase-storage-compat.js"></script>
+		<script defer src="/__/firebase/9.0.1/firebase-analytics-compat.js"></script>
+		<script defer src="/__/firebase/9.0.1/firebase-remote-config-compat.js"></script>
+		<script defer src="/__/firebase/9.0.1/firebase-performance-compat.js"></script>
+		<script defer src="/__/firebase/init.js?useEmulator=true"></script>
+
+		<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+		<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
+		<script defer src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+		<script defer src="scripts/main.js"></script>
+        <script defer src="scripts/rooms.js"></script>
+	</head>
+	<body>		
+		<div class="container">
+            <h2>Rooms</h2>
+
+			<button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#joinRoom">Join a Room</button>
+            <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#createRoom">Create a Room</button>
+            <button class="btn btn-danger position-fixed mx-4 mt-4" style="right: 0; top: 0" onclick="logout()">Exit</button>
+            <br>
+            <div id="rooms" class="list-group mt-3">
+                <div id="status">Loading Rooms...</div>
+                <room
+                    v-for="room in roomsList"
+                    v-bind:name="room.name"
+                    v-bind:owner="room.owner"
+                    v-bind:type="room.type"
+                    v-bind:members="room.members"
+                    v-bind:max-members="room.maxMembers"
+                    v-bind:id="room.id"
+                ></room>
+            </div>
+		</div>
+
+        <div class="modal fade py-5" tabindex="-1" role="dialog" id="joinRoom">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content rounded-5 shadow">
+                    <div class="modal-header p-5 pb-4 border-bottom-0">
+                        <!-- <h5 class="modal-title">Modal title</h5> -->
+                        <h2 class="fw-bold mb-0">Join a Room</h2>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+            
+                    <div class="modal-body p-5 pt-0">
+                        <form class="">
+                            <div class="form-floating mb-3">
+                                <input type="text" class="form-control rounded-4" id="roomCode" placeholder="Code">
+                                <label for="roomCode">Room Code</label>
+                            </div>
+                        </form>
+                        <button class="w-100 mb-2 btn btn-lg rounded-4 btn-primary" onclick="determineJoin(document.getElementById('roomCode').value)">Join</button>
+
+                        <script defer>
+                            function determineJoin(code){
+                                db = firebase.firestore()
+                                let roomCode = code
+                                let errorToast = document.getElementById('errorToast');
+                                let errorText = document.getElementById('errorText');
+                                var passed = false
+                                
+                                if(/[0-9a-zA-Z]/.test(roomCode)){
+                                    db.collection('rooms').where('code', '==', roomCode).get().then((querySnapshot) => {
+                                        querySnapshot.forEach((roomSnapshot) => {
+                                            let roomData = roomSnapshot.data()
+
+                                            if(roomData != undefined){
+                                                window.location = `room?id=${roomSnapshot.id}&q=${roomCode}`
+                                                passed = true
+                                            } else{
+                                                errorText.innerHTML="This code doesn't exist."
+                                                let toast = new bootstrap.Toast(errorToast)
+                                                toast.show()
+                                            }
+                                        })
+
+                                        if(passed == false){
+                                            errorText.innerHTML="This code doesn't exist."
+                                            let toast = new bootstrap.Toast(errorToast)
+                                            toast.show()
+                                        }
+                                    })
+                                } else{
+                                    errorText.innerHTML="Please insert a valid code."
+                                    toast = new bootstrap.Toast(errorToast)
+                                    toast.show()
+                                }
+                            }
+                        </script>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade py-5" tabindex="-1" role="dialog" id="createRoom">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content rounded-5 shadow">
+                    <div class="modal-header p-5 pb-4 border-bottom-0">
+                    <!-- <h5 class="modal-title">Modal title</h5> -->
+                    <h2 class="fw-bold mb-0">Create a Room</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+            
+                    <div class="modal-body p-5 pt-0">
+                        <form class="">
+                            <div class="form-floating mb-3">
+                                <input type="text" class="form-control rounded-4" id="roomName" placeholder="Cool Name">
+                                <label for="roomName">Room Name</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="roomType" id="publicType" checked>
+                                <label class="form-check-label" for="publicType">
+                                  Public
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="roomType" id="privateType">
+                                <label class="form-check-label" for="privateType">
+                                  Private
+                                </label>
+                            </div>
+                            <div class="form-floating mb-3 mt-3">
+                                <input type="password" class="form-control rounded-4" id="roomPassword" placeholder="Password">
+                                <label for="roomPassword">Password</label>
+                            </div>
+                            <select class="form-select mb-3" id="maxMembers">
+                                <option selected>Max Members</option>
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                                <option value="3">3</option>
+                                <option value="4">4</option>
+                                <option value="5">5</option>
+                            </select>
+                        </form>
+                        <button class="w-100 mb-2 btn btn-lg rounded-4 btn-primary" onclick="determine()" data-bs-dismiss="modal">Create</button>
+
+                        <script defer>
+                            function determine(){
+                                let roomName = document.getElementById('roomName').value;
+                                let roomPassword = document.getElementById('roomPassword').value;
+                                let publicValue = document.getElementById('publicType').checked;
+                                let privateValue = document.getElementById('privateType').checked;
+                                let maxMembers = document.getElementById('maxMembers').value;
+
+                                let errorToast = document.getElementById('errorToast');
+                                let errorText = document.getElementById('errorText');
+
+                                if(publicValue == true && /[0-9a-zA-Z]/.test(roomName)){
+                                    if(roomName.length < 25){
+                                        if(maxMembers != "Max Members"){
+                                            createRoom(roomName, firebase.auth().currentUser.displayName, "public", null, maxMembers);
+                                        } else{
+                                            errorText.innerHTML = 'Please select a valid number of members.'
+                                            let toast = new bootstrap.Toast(errorToast)
+                                            toast.show()
+                                        }
+                                    } else{
+                                        errorText.innerHTML = 'The room name should have less than 25 characters.'
+                                        let toast = new bootstrap.Toast(errorToast)
+                                        toast.show()
+                                    }
+                                } else if(privateValue == true && roomName != ""){
+                                    if(/[0-9a-zA-Z]/.test(roomPassword) && roomPassword.length > 0){
+                                        if(maxMembers != "Max Members"){
+                                            createRoom(roomName, firebase.auth().currentUser.displayName, "private", roomPassword, maxMembers);
+                                        } else{
+                                            errorText.innerHTML = 'Please select a valid number of members.'
+                                            let toast = new bootstrap.Toast(errorToast)
+                                            toast.show()
+                                        }
+                                    } else{
+                                        errorText.innerHTML = 'Please insert a password for your room.'
+                                        let toast = new bootstrap.Toast(errorToast)
+                                        toast.show()
+                                    }
+                                } else{
+                                    errorText.innerHTML = 'Please insert a name for your room.'
+                                    let toast = new bootstrap.Toast(errorToast)
+                                    toast.show()
+                                }
+                            }
+                        </script>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 3000000">
+            <div id="successToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+                <div class="toast-header">
+                    ✅&emsp;
+                    <strong class="me-auto">Success!</strong>
+                    <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+                <div class="toast-body" id="successText">
+                </div>
+            </div>
+        </div>
+
+        <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 3000000">
+            <div id="errorToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+                <div class="toast-header">
+                        😕&emsp;
+                        <strong class="me-auto">Something went wrong...</strong>
+                        <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+                <div class="toast-body" id="errorText">
+                </div>
+            </div>
+        </div>
+	</body>
+</html>
